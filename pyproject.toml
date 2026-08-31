@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf-to-rag-text"
+version = "1.0.0"
+description = "Turn a PDF into clean text for RAG: running headers, footers and page numbers removed, hyphenation rejoined, optional chunking."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mathieu Brassard" }]
+keywords = ["pdf", "rag", "retrieval", "llm", "text-extraction", "embeddings", "ocr"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Text Processing :: Filters",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = ["pymupdf>=1.23"]
+
+[project.optional-dependencies]
+ocr = ["pytesseract>=0.3.10", "pillow>=10.0"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+pdf2rag = "pdf_to_rag_text.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/iMathieuB/pdf-to-rag-text"
+Issues = "https://github.com/iMathieuB/pdf-to-rag-text/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
