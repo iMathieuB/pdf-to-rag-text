@@ -97,6 +97,14 @@ def convert(
     report.hyphenations_joined = joined
 
     if not keep_line_breaks:
+        # Headings are isolated before the reflow, not after. Flattening joins
+        # every line of a block into one, and a heading sits directly above its
+        # first paragraph with no blank line between them, so reflowing first
+        # glues "2. Method" onto the sentence that follows and the heading stops
+        # being recognisable. Marking it as its own block first is what lets
+        # --markdown and paragraph reflow both work on the same run.
+        if markdown:
+            text = _isolate_headings(text)
         text = flatten_paragraphs(text)
 
     if markdown:
@@ -163,6 +171,24 @@ def _to_markdown(text: str, title: str) -> str:
         header.append("")
 
     return "\n".join(header + out)
+
+
+def _isolate_headings(text: str) -> str:
+    """Put a blank line either side of every heading.
+
+    ``flatten_paragraphs`` treats a blank line as the only paragraph boundary,
+    so this is what keeps a heading on a line of its own through the reflow.
+    """
+    out: list[str] = []
+    for line in text.split("\n"):
+        if _heading_level(line.strip()):
+            if out and out[-1].strip():
+                out.append("")
+            out.append(line.strip())
+            out.append("")
+        else:
+            out.append(line)
+    return "\n".join(out)
 
 
 def _heading_level(line: str) -> int | None:

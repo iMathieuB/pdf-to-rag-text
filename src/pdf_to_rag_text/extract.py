@@ -35,10 +35,33 @@ class RawDocument:
     path: Path
     pages: list[Page] = field(default_factory=list)
     used_ocr: bool = False
+    meta_title: str = ""
 
     @property
     def title(self) -> str:
-        return self.path.stem
+        """The document's own title when it has a usable one, else the filename.
+
+        A PDF's Title metadata is very often the authoring tool's leftovers --
+        "Microsoft Word - final_v3.docx", an empty string, or the filename
+        again -- so it is only preferred when it looks like a real title.
+        """
+        candidate = _normalise_meta_title(self.meta_title)
+        return candidate or self.path.stem
+
+
+def _normalise_meta_title(value: str) -> str:
+    """Return a PDF Title worth using, or an empty string."""
+    title = " ".join((value or "").split())
+    if len(title) < 3 or len(title) > 200:
+        return ""
+    lowered = title.lower()
+    if lowered.startswith("microsoft word -") or lowered.startswith("microsoft powerpoint -"):
+        return ""
+    if lowered.endswith((".pdf", ".docx", ".doc", ".indd", ".pptx")):
+        return ""
+    if lowered in {"untitled", "document", "print", "sans titre"}:
+        return ""
+    return title
 
 
 def read_pdf(
@@ -79,9 +102,10 @@ def read_pdf(
         end = last_page if last_page else len(doc)
         indices = range(max(0, start), min(len(doc), end))
         pages = [Page(number=i + 1, text=doc[i].get_text("text")) for i in indices]
+        meta_title = (doc.metadata or {}).get("title", "") or ""
 
         if not _looks_scanned(pages):
-            return RawDocument(path=path, pages=pages)
+            return RawDocument(path=path, pages=pages, meta_title=meta_title)
 
         if not ocr_language:
             raise ExtractionError(
@@ -95,7 +119,7 @@ def read_pdf(
             Page(number=i + 1, text=_ocr_page(doc[i], ocr_language, ocr_dpi)) for i in indices
         ]
 
-    return RawDocument(path=path, pages=ocr_pages, used_ocr=True)
+    return RawDocument(path=path, pages=ocr_pages, used_ocr=True, meta_title=meta_title)
 
 
 def _looks_scanned(pages: list[Page], sample: int = 10, threshold: float = 0.8) -> bool:

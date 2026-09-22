@@ -14,7 +14,10 @@ from pdf_to_rag_text.clean import (
     join_pages,
     rejoin_hyphenation,
 )
-from pdf_to_rag_text.extract import Page
+from pathlib import Path
+
+from pdf_to_rag_text.convert import _isolate_headings, _to_markdown
+from pdf_to_rag_text.extract import Page, RawDocument
 
 
 def book(pages: int = 12, header: str = "The Art of Testing") -> list[Page]:
@@ -213,3 +216,65 @@ def test_jsonl_is_one_object_per_line(tmp_path):
     first = json.loads(lines[0])
     assert {"id", "text", "index", "source", "chars"} <= set(first)
     assert first["chars"] == len(first["text"])
+
+
+# --- Markdown structure ------------------------------------------------------
+
+
+def test_a_heading_survives_the_paragraph_reflow():
+    """The regression that made --markdown produce no headings at all.
+
+    Heading detection used to run after paragraphs were flattened, by which
+    point the heading had been joined to the sentence below it and no longer
+    matched anything.
+    """
+    text = "2. Method\nWe sampled every page of the\ncorpus and measured it."
+
+    out = _to_markdown(flatten_paragraphs(_isolate_headings(text)), "Report")
+
+    assert "## 2. Method" in out
+    assert "We sampled every page of the corpus and measured it." in out
+
+
+def test_isolating_a_heading_does_not_swallow_the_body():
+    text = "1. Introduction\nFirst line.\nSecond line.\n\n2. Method\nThird line."
+
+    flat = flatten_paragraphs(_isolate_headings(text))
+
+    assert "First line. Second line." in flat
+    assert "Third line." in flat
+
+
+def test_text_without_headings_is_left_alone():
+    text = "A plain paragraph.\nWrapped by the column."
+
+    assert _isolate_headings(text) == text
+
+
+def test_a_table_of_contents_needs_three_headings():
+    two = _to_markdown(_isolate_headings("1. One\nBody.\n\n2. Two\nBody."), "Doc")
+    three = _to_markdown(
+        _isolate_headings("1. One\nBody.\n\n2. Two\nBody.\n\n3. Three\nBody."), "Doc"
+    )
+
+    assert "## Contents" not in two
+    assert "## Contents" in three
+
+
+# --- Document title ----------------------------------------------------------
+
+
+def test_a_real_pdf_title_is_preferred_over_the_filename():
+    doc = RawDocument(path=Path("final_v3.pdf"), meta_title="Designing Data-Intensive Applications")
+
+    assert doc.title == "Designing Data-Intensive Applications"
+
+
+@pytest.mark.parametrize(
+    "junk",
+    ["", "   ", "Microsoft Word - final_v3.docx", "untitled", "report.pdf", "ab"],
+)
+def test_an_authoring_tool_leftover_falls_back_to_the_filename(junk):
+    doc = RawDocument(path=Path("annual_report.pdf"), meta_title=junk)
+
+    assert doc.title == "annual_report"

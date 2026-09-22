@@ -7,7 +7,7 @@ Extract a book with a standard library and every chunk of the result carries the
 This removes it, and shows you what it removed.
 
 ```bash
-pip install pdf-to-rag-text
+pip install "git+https://github.com/iMathieuB/pdf-to-rag-text.git"
 pdf2rag book.pdf --inspect
 ```
 
@@ -125,10 +125,14 @@ The pieces work on their own: `read_pdf` for pages with OCR fallback, `find_repe
 
 ## Install
 
+Not on PyPI yet. Install from this repository:
+
 ```bash
-pip install pdf-to-rag-text            # PDF reading included
-pip install "pdf-to-rag-text[ocr]"     # plus OCR for scans
+pip install "git+https://github.com/iMathieuB/pdf-to-rag-text.git"                 # PDF reading included
+pip install "pdf-to-rag-text[ocr] @ git+https://github.com/iMathieuB/pdf-to-rag-text.git"   # plus OCR for scans
 ```
+
+Python 3.10 or newer. The only required dependency is PyMuPDF, which ships as a wheel on Windows, macOS and Linux, so there is no build step.
 
 OCR also needs the [Tesseract](https://github.com/tesseract-ocr/tesseract) binary.
 
@@ -139,7 +143,11 @@ pip install -e ".[dev]"
 pytest
 ```
 
-24 tests, none needing a PDF: the cleaner and the chunker work on page objects, so their behaviour is asserted directly. The tests cover the cases worth getting right, including that a real compound word keeps its hyphen, that a chunk never spans two sections, and that an overlap never begins mid-word.
+35 tests, none needing a PDF: the cleaner and the chunker work on page objects, so their behaviour is asserted directly. The tests cover the cases worth getting right, including that a real compound word keeps its hyphen, that a chunk never spans two sections, and that an overlap never begins mid-word.
+
+## For agents
+
+[AGENTS.md](AGENTS.md) is the working contract, written to be read by a model. Point Claude Code, Cowork, Cursor or anything similar at it.
 
 ## Licence
 
